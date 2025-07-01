@@ -1,27 +1,20 @@
 from flask import Flask, request, jsonify
 import datetime
 import os
-from openai import OpenAI
 from pinecone import Pinecone
 # from cpt_rag import query_cpt_pinecone
 from dotenv import load_dotenv
+from openaiWrapper import get_embeddings
+from config import PINECONE_INDEX_NAME
 
 app = Flask(__name__)
 load_dotenv()
 
 # Load environment variables or set directly
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY"))
-PINECONE_API_KEY = os.getenv("PINECONE_API_KEY", os.getenv("PINECONE_API_KEY"))
-PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "cpt-codes-embeddings-2")
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 
-openai_client = OpenAI(api_key=OPENAI_API_KEY)
 pc = Pinecone(api_key=PINECONE_API_KEY)
 index = pc.Index(PINECONE_INDEX_NAME)
-
-def get_embeddings(texts, model="text-embedding-3-small"):
-    response = openai_client.embeddings.create(input=texts, model=model)
-    embeddings = [item.embedding for item in response.data]
-    return embeddings
 
 def query_cpt_pinecone(case_description, top_k=5):
     # Step 1: Get embedding for the query
