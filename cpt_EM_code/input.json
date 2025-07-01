@@ -1,0 +1,22 @@
+{
+    "patient_id" : "",
+    "patient_type" : ["new", "established"], 
+    "is_ipd_opd":["ipd", "opd"],
+    "service_transcript":"",
+    "transcript_summary":"",
+    "service_type":"",
+    
+    "service_setting" : ["office", "other opd", "ipd", "observation care", "ipd admission and discharge", "ipd consultation","observation consultation", "emergency", "nursing", "residence"], 
+    "service_number" : ["initial", "subsequent", "discharge"],
+    "department":"",
+    "service_durations" : {
+        "face_to_face":{
+            "reason":"",
+            "time":""
+        },
+        "data_review":{
+            "reason":"",
+            "time":""
+        }
+    }
+}
