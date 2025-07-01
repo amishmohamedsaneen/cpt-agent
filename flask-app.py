@@ -2,10 +2,11 @@ from flask import Flask, request, jsonify
 import datetime
 import os
 from pinecone import Pinecone
-# from cpt_rag import query_cpt_pinecone
 from dotenv import load_dotenv
-from openaiWrapper import get_embeddings
+from openaiWrapper import get_embeddings, gpt_summarize_and_categorize
 from config import PINECONE_INDEX_NAME
+import json
+from cpt_EM_code.cpt_em_mdm import cpt_mdm_driver
 
 app = Flask(__name__)
 load_dotenv()
@@ -42,17 +43,33 @@ def case_summary_and_cpt():
     if not case_description:
         return jsonify({"error": "Missing 'case_description' in request"}), 400
 
-    # Step 1: Summarize the case
-    # summary = summarize_chain.invoke({"case": case_description})
-    # print("--- summary complete", datetime.datetime.now())
+    # Step 1: Summarize and categorize the case
+    gpt_result = gpt_summarize_and_categorize(case_description)
+    try:
+        gpt_json = json.loads(gpt_result)
+    except Exception:
+        gpt_json = {"summary": case_description, "evaluation and management": "", "other": ""}
 
-    # Step 2: Retrieve CPT code(s)
+    # Step 2: If evaluation and management present, use cpt_mdm_driver
+    eval_mgmt = gpt_json.get("evaluation and management", "")
+    if eval_mgmt and str(eval_mgmt).strip().lower() not in ["", "none", "false", "no"]:
+        mdm_data = {
+            "summary": gpt_json.get("summary", case_description)
+        }
+        cpt_code, reason = cpt_mdm_driver(mdm_data)
+        return jsonify({
+            "summary": gpt_json.get("summary", case_description),
+            "evaluation and management": eval_mgmt,
+            "cpt_code": cpt_code,
+            "reason": reason,
+            "other": gpt_json.get("other", "")
+        })
+
+    # Step 3: Otherwise, retrieve CPT code(s) from Pinecone
     cpt_results = query_cpt_pinecone(case_description)
     print("--- retrieval complete", datetime.datetime.now())
 
-    # Step 3: Format output
     formatted_cpt = []
-    # cpt_results may be a list of Document objects
     for doc in cpt_results:
         formatted_cpt.append({
             "content": getattr(doc, 'page_content', str(doc)),
@@ -60,7 +77,9 @@ def case_summary_and_cpt():
         })
 
     return jsonify({
-        "summary": case_description,
+        "summary": gpt_json.get("summary", case_description),
+        "evaluation and management": eval_mgmt,
+        "other": gpt_json.get("other", ""),
         "cpt_results": formatted_cpt
     })
 
